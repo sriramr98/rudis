@@ -52,6 +52,6 @@ fn process_connection(stream: &mut TcpStream) -> Result<()> {
 
     let resp = request.execute()?;
 
-    stream.write_all(resp.encode().as_slice())?;
+    stream.write_all(&resp.encode())?;
     Ok(())
 }
