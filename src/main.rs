@@ -5,7 +5,11 @@ use std::{
     thread,
 };
 
+mod resp;
+
 use anyhow::Result;
+
+use crate::resp::parser::parse_resp;
 
 fn main() {
     println!("Logs from your program will appear here!");
@@ -41,9 +45,13 @@ fn process_connection(stream: &mut TcpStream) -> Result<()> {
     let bytes_read = stream.read(&mut buf)?;
 
     let command = str::from_utf8(&buf[0..bytes_read])?;
+    
+    let request = parse_resp(command)?;
 
-    println!("Received command {}", command);
-    stream.write_all(b"+PONG\r\n")?;
+    request.validate()?;
 
+    let resp = request.execute()?;
+
+    stream.write_all(resp.encode().as_slice())?;
     Ok(())
 }
