@@ -1,3 +1,5 @@
+use std::fmt::format;
+
 pub enum RespFrame {
     SimpleString(String),
     Error(String),
@@ -5,6 +7,8 @@ pub enum RespFrame {
     BulkString(String),
     Array(Vec<RespFrame>),
     Null,
+    NullBulkString,
+    NullArray
 }
 
 const CRLF: &str = "\r\n";
@@ -22,6 +26,9 @@ impl RespFrame {
                 }
             },
             RespFrame::BulkString(s) => format!("${}{}{}{}", s.len(), CRLF, s, CRLF).into_bytes(),
+            RespFrame::Null => format!("_{}", CRLF).into_bytes(),
+            RespFrame::NullBulkString => format!("$-1{}", CRLF).into_bytes(),
+            RespFrame::NullArray => format!("*-1{}", CRLF).into_bytes(),
             _ => todo!()
         }
     }
