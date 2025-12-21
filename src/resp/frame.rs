@@ -6,6 +6,7 @@ pub enum RespFrame {
     Integer(i64),
     BulkString(String),
     Array(Vec<RespFrame>),
+    EmptyArray,
     Null,
     NullBulkString,
     NullArray
@@ -29,6 +30,14 @@ impl RespFrame {
             RespFrame::Null => format!("_{}", CRLF).into_bytes(),
             RespFrame::NullBulkString => format!("$-1{}", CRLF).into_bytes(),
             RespFrame::NullArray => format!("*-1{}", CRLF).into_bytes(),
+            RespFrame::EmptyArray => format!("*0{}", CRLF).into_bytes(),
+            RespFrame::Array(items) => {
+                let mut encoded = format!("*{}{}", items.len(), CRLF).into_bytes();
+                for item in items {
+                    encoded.extend(item.encode());
+                }
+                encoded
+            }
             _ => todo!()
         }
     }
