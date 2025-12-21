@@ -68,7 +68,7 @@ impl Command for GetCommand {
         match result {
             Some(value) => {
                 if value.expired() {
-                    return Ok(RespFrame::Null);
+                    return Ok(RespFrame::NullBulkString);
                 }
                 Ok(RespFrame::BulkString(String::from_utf8(value.value.to_vec())?))
             }
