@@ -4,12 +4,13 @@ use crate::resp::commands::{Command, structs::Data};
 
 // RPUSH implementaion
 pub struct ListPushCommand {
-    args: Vec<String>
+    args: Vec<String>,
+    reverse: bool
 }
 
 impl ListPushCommand {
-    pub fn new(args: Vec<String>) -> Self {
-        Self { args }
+    pub fn new(args: Vec<String>, reverse: bool) -> Self {
+        Self { args, reverse }
     }
 }
 
@@ -18,10 +19,14 @@ impl Command for ListPushCommand {
         self.validate()?;
 
         let key = &self.args[0];
-        let values: Vec<String> = self.args[1..]
+        let mut values: Vec<String> = self.args[1..]
             .iter()
             .map(|s| s.clone())
             .collect();
+
+        if self.reverse {
+            values.reverse();
+        }
 
         let mut db_write = db.write().unwrap();
         let data = db_write.get(key)?;
@@ -30,7 +35,11 @@ impl Command for ListPushCommand {
             Some(d) => match &d.value {
                 super::structs::Value::List(items) => {
                     let mut new_items = items.clone();
-                    new_items.extend(values);
+                    if self.reverse {
+                        new_items.splice(0..0, values);
+                    } else {
+                        new_items.extend(values);
+                    }
                     new_items
                 },
                 _ => {
