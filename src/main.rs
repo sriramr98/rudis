@@ -12,7 +12,7 @@ mod resp;
 use anyhow::Result;
 use bytes::{BufMut, BytesMut};
 
-use crate::mem::MemDB;
+use crate::{mem::MemDB, resp::commands::kv::Data};
 use crate::resp::parser::parse_resp;
 fn main() {
     println!("Logs from your program will appear here!");
@@ -33,7 +33,7 @@ fn main() {
     }
 }
 
-fn handle_connection(mut stream: TcpStream, db: Arc<RwLock<MemDB>>) {
+fn handle_connection(mut stream: TcpStream, db: Arc<RwLock<MemDB<Data>>>) {
     thread::spawn(move || {
         loop {
             if let Err(e) = process_connection(&mut stream, &db) {
@@ -47,7 +47,7 @@ fn handle_connection(mut stream: TcpStream, db: Arc<RwLock<MemDB>>) {
     });
 }
 
-fn process_connection(stream: &mut TcpStream, db: &Arc<RwLock<MemDB>>) -> Result<()> {
+fn process_connection(stream: &mut TcpStream, db: &Arc<RwLock<MemDB<Data>>>) -> Result<()> {
     let mut buf = [0u8; 512];
     let bytes_read = stream.read(&mut buf)?;
 

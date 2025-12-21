@@ -2,37 +2,31 @@ use std::{collections::HashMap, sync::{Arc, RwLock}, time::Instant};
 
 use anyhow::{Error, Ok, Result};
     
-type BinaryString = Vec<u8>;
 
-pub enum Value {
-    String(BinaryString)
+pub struct MemDB<T> {
+    store: HashMap<String, T>
 }
 
-
-pub struct MemDB {
-    store: HashMap<String, Value>
-}
-
-impl MemDB {
+impl<T> MemDB<T> {
     pub fn new() -> Self {
         MemDB {
             store: HashMap::new()
         }
     }
 
-    pub fn get(&self, key: &str) -> Result<Option<Vec<u8>>> {
-        let cloned: Option<&Value> = self.store.get(key);
+    pub fn get(&self, key: &str) -> Result<Option<&T>> {
+        let cloned: Option<&T> = self.store.get(key);
 
         match cloned {
-            Some(Value::String(v)) => {
-                Ok(Some(v.clone()))
+            Some(vs) => {
+                Ok(Some(vs))
             }
             None => Ok(None)
         }
 
     }
 
-    pub fn set(&mut self, key: String, value: Vec<u8>) {
-        self.store.insert(key, Value::String(value));
+    pub fn set(&mut self, key: String, data: T) {
+        self.store.insert(key, data);
     }
 }
