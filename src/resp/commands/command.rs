@@ -2,7 +2,7 @@ use std::sync::RwLock;
 
 use anyhow::Result;
 
-use crate::{mem::MemDB, resp::{commands::kv::Data, frame::RespFrame}};
+use crate::{mem::MemDB, resp::{commands::structs::Data, frame::RespFrame}};
 
 pub trait Command {
     fn execute(&self, db: &RwLock<MemDB<Data>>) -> Result<RespFrame>;

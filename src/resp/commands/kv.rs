@@ -7,44 +7,8 @@ use anyhow::{Error, Ok};
 
 use crate::{
     mem::MemDB,
-    resp::{commands::Command, frame::RespFrame},
+    resp::{commands::{Command, structs::{Data, Value}}, frame::RespFrame},
 };
-
-type BinaryString = Vec<u8>;
-
-#[derive(Clone)]
-pub enum Value {
-    String(BinaryString)
-}
-
-impl Value {
-    pub fn to_vec(self: &Self) -> Vec<u8> {
-        match self {
-           Value::String(v)  => v.clone()
-        } 
-    }
-
-    pub fn expired(&self) -> bool {
-        match self {
-            Value::String(_) => false,
-        }
-    }
-}
-
-// Data wraps over Value with extra metadata
-pub struct Data {
-    value: Value,
-    expires_at: Option<Instant>
-}
-
-impl Data {
-    pub fn expired(&self) -> bool {
-        match self.expires_at {
-            Some(expiry) => Instant::now() >= expiry,
-            None => false,
-        }
-    }
-}
 
 pub struct GetCommand {
     args: Vec<String>,

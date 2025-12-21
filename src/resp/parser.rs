@@ -63,6 +63,7 @@ pub fn parse_resp(input: &str) -> Result<Box<dyn Command>> {
         "echo" => Ok(Box::new(Echo{ args })),
         "get" => Ok(Box::new(GetCommand::new(args))),
         "set" => Ok(Box::new(SetCommand::new(args))),
+        "rpush" => Ok(Box::new(crate::resp::commands::list::ListPushCommand::new(args))),
         _ => Err(Error::msg("Unknown command"))
     }
 }

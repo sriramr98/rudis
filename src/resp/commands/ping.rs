@@ -2,7 +2,7 @@ use std::sync::RwLock;
 
 use anyhow::Ok;
 
-use crate::{mem::MemDB, resp::{commands::{Command, kv::Data}, frame::RespFrame}};
+use crate::{mem::MemDB, resp::{commands::{Command, structs::Data}, frame::RespFrame}};
 
 pub struct Ping {}
 

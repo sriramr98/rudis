@@ -20,7 +20,7 @@ impl RespFrame {
             RespFrame::Error(err) => format!("-{}{}", err, CRLF).into_bytes(),
             RespFrame::Integer(num) => {
                 if num >= 0 {
-                    format!(":+{}{}", num, CRLF).into_bytes()
+                    format!(":{}{}", num, CRLF).into_bytes()
                 } else {
                     format!(":-{}\r\n", num).into_bytes()
                 }

@@ -12,7 +12,7 @@ mod resp;
 use anyhow::Result;
 use bytes::{BufMut, BytesMut};
 
-use crate::{mem::MemDB, resp::commands::kv::Data};
+use crate::{mem::MemDB, resp::{commands::structs::Data, frame::RespFrame}};
 use crate::resp::parser::parse_resp;
 fn main() {
     println!("Logs from your program will appear here!");
@@ -42,6 +42,7 @@ fn handle_connection(mut stream: TcpStream, db: Arc<RwLock<MemDB<Data>>>) {
                     break;
                 }
                 println!("{}", e);
+                stream.write_all(&RespFrame::Error(e.to_string()).encode()).unwrap_or(());
             }
         }
     });

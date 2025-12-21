@@ -1,6 +1,6 @@
 use std::sync::RwLock;
 
-use crate::{mem::MemDB, resp::commands::{Command, kv::Data}};
+use crate::{mem::MemDB, resp::commands::{Command, structs::Data}};
 
 pub struct Echo {
     pub args: Vec<String>,

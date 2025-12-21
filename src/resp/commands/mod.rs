@@ -2,6 +2,8 @@ pub mod command;
 pub mod ping;
 pub mod echo;
 pub mod kv;
+pub mod list;
+pub mod structs;
 
 pub use command::Command;
 pub use ping::Ping;
