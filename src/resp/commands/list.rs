@@ -74,26 +74,41 @@ impl Command for ListGetCommand {
     fn execute(&self, db: &std::sync::RwLock<crate::mem::MemDB<Data>>) -> anyhow::Result<crate::resp::frame::RespFrame> {
         let key = self.args[0].clone();
 
-        let start: usize = self.args[1].parse().unwrap_or(0);
-        let end: usize = self.args[2].parse().unwrap_or(0);
-
-        if start > end {
-            return Ok(crate::resp::frame::RespFrame::EmptyArray);
-        }
-
+        let mut start: isize = self.args[1].parse().unwrap_or(0);
+        let mut end: isize = self.args[2].parse().unwrap_or(0);
+ 
         let db_read = db.read().unwrap();
         match db_read.get(&key)? {
             Some(data) => {
                 match &data.value {
                     super::structs::Value::List(items) => {
-                        let total_items = items.len();
+                        
+                        let total_items = items.len() as isize;
+                        
+                        if start < 0 {
+                            start = total_items + start;
+                        }
+
+                        if end < 0 {
+                            end = total_items + end;
+                        }
+
+                        if start > end {
+                            return Ok(crate::resp::frame::RespFrame::EmptyArray);
+                        }
 
                         if start >= total_items {
                             return Ok(crate::resp::frame::RespFrame::EmptyArray);
                         }
 
-                        let slice_end = if end + 1 > items.len() { items.len() } else { end + 1 };
-                        let sliced_items = &items[start..slice_end];
+                        let slice_end: isize = if end + 1 > total_items { total_items } else { end + 1 };
+
+                        let start_usize = start.max(0) as usize;
+                        let end_usize = slice_end.max(0) as usize;
+
+                        println!("LRANGE slicing from {} to {}", start_usize, end_usize);
+
+                        let sliced_items = &items[start_usize..end_usize];
                         let resp_frames: Vec<crate::resp::frame::RespFrame> = sliced_items.iter()
                             .map(|item| crate::resp::frame::RespFrame::BulkString(item.clone()))
                             .collect();
@@ -117,8 +132,8 @@ impl Command for ListGetCommand {
             return Err(anyhow::anyhow!("ERR wrong number of arguments for 'lrange' command"));
         }
 
-        let _start: usize = self.args[1].parse().map_err(|_| anyhow::anyhow!("ERR value is not an integer or out of range"))?;
-        let _end: usize = self.args[2].parse().map_err(|_| anyhow::anyhow!("ERR value is not an integer or out of range"))?;
+        let _start: isize = self.args[1].parse().map_err(|_| anyhow::anyhow!("ERR value is not an integer or out of range"))?;
+        let _end: isize = self.args[2].parse().map_err(|_| anyhow::anyhow!("ERR value is not an integer or out of range"))?;
 
         Ok(())
     }
