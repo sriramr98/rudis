@@ -147,3 +147,45 @@ impl Command for ListGetCommand {
         Ok(())
     }
 }
+
+
+pub struct ListLengthCommand {
+    args: Vec<String>
+}
+
+impl ListLengthCommand {
+    pub fn new(args: Vec<String>) -> Self {
+        Self { args }
+    }
+}
+
+impl Command for ListLengthCommand {
+    fn execute(&self, db: &std::sync::RwLock<crate::mem::MemDB<super::structs::Data>>) -> anyhow::Result<crate::resp::frame::RespFrame> {
+        self.validate()?;
+
+        let key = &self.args[0];
+
+        let db_read = db.read().unwrap();
+        match db_read.get(key)? {
+            Some(d) => match &d.value {
+                super::structs::Value::List(items) => {
+                    let count = items.len() as i64;
+                    Ok(crate::resp::frame::RespFrame::Integer(count))
+                },
+                _ => {
+                    Err(anyhow::anyhow!("WRONGTYPE Operation against a key holding the wrong kind of value"))
+                }
+            },
+            None => {
+                Ok(crate::resp::frame::RespFrame::Integer(0))
+            }
+        }
+    }
+
+    fn validate(&self) -> anyhow::Result<()> {
+        if self.args.len() != 1 {
+            return Err(anyhow::anyhow!("ERR wrong number of arguments for 'llen' command"));
+        }
+        Ok(())
+    }
+}
