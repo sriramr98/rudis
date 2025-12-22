@@ -1,6 +1,6 @@
 use anyhow::Ok;
 
-use crate::resp::commands::{Command, structs::Data};
+use crate::resp::{commands::{Command, structs::{Data, Value}}, frame::RespFrame};
 
 // RPUSH implementaion
 pub struct ListPushCommand {
@@ -16,8 +16,6 @@ impl ListPushCommand {
 
 impl Command for ListPushCommand {
     fn execute(&self, db: &std::sync::RwLock<crate::mem::MemDB<super::structs::Data>>) -> anyhow::Result<crate::resp::frame::RespFrame> {
-        self.validate()?;
-
         let key = &self.args[0];
         let mut values: Vec<String> = self.args[1..]
             .iter()
@@ -161,8 +159,6 @@ impl ListLengthCommand {
 
 impl Command for ListLengthCommand {
     fn execute(&self, db: &std::sync::RwLock<crate::mem::MemDB<super::structs::Data>>) -> anyhow::Result<crate::resp::frame::RespFrame> {
-        self.validate()?;
-
         let key = &self.args[0];
 
         let db_read = db.read().unwrap();
@@ -185,6 +181,47 @@ impl Command for ListLengthCommand {
     fn validate(&self) -> anyhow::Result<()> {
         if self.args.len() != 1 {
             return Err(anyhow::anyhow!("ERR wrong number of arguments for 'llen' command"));
+        }
+        Ok(())
+    }
+}
+
+pub struct ListPopCommand {
+    args: Vec<String>
+}
+
+impl ListPopCommand {
+    pub fn new(args: Vec<String>) -> Self {
+        Self { args }
+    }
+}
+
+impl Command for ListPopCommand {
+    fn execute(&self, db: &std::sync::RwLock<crate::mem::MemDB<super::structs::Data>>) -> anyhow::Result<crate::resp::frame::RespFrame> {
+        let key = self.args[0].clone();
+
+        let mut db_write = db.write().map_err(|e| anyhow::anyhow!(e.to_string()))?;
+
+        let (mut new_list, expires_at ) = {
+            let Some(data) = db_write.get(&key)? else {
+                return Ok(RespFrame::NullBulkString);
+            };
+
+            let Value::List(items) = &data.value else {
+                return Err(anyhow::anyhow!("WRONGTYPE Operation against a key holding the wrong kind of value"));
+            };
+
+            (items.clone(), data.expires_at)
+        };
+
+        let popped_element = new_list.remove(0);
+        db_write.set(key, Data { value: Value::List(new_list), expires_at });
+        Ok(RespFrame::BulkString(popped_element))
+    }
+
+    fn validate(&self) -> anyhow::Result<()> {
+        if self.args.len() != 1 {
+            return Err(anyhow::anyhow!("ERR wrong number of arguments for 'lpop/rpop' command"));
         }
         Ok(())
     }

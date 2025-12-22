@@ -67,6 +67,7 @@ pub fn parse_resp(input: &str) -> Result<Box<dyn Command>> {
         "lpush" => Ok(Box::new(crate::resp::commands::list::ListPushCommand::new(args, true))),
         "lrange" => Ok(Box::new(crate::resp::commands::list::ListGetCommand::new(args))),
         "llen" => Ok(Box::new(crate::resp::commands::list::ListLengthCommand::new(args))),
+        "lpop" => Ok(Box::new(crate::resp::commands::list::ListPopCommand::new(args))),
         _ => Err(Error::msg("Unknown command"))
     }
 }

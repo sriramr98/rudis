@@ -1,4 +1,4 @@
-use std::time::Instant;
+use std::{collections::VecDeque, time::Instant};
 
 type BinaryString = Vec<u8>;
 
