@@ -228,6 +228,10 @@ impl Command for ListPopCommand {
             (items.clone(), data.expires_at)
         };
 
+        if remove_end > new_list.len() {
+            remove_end = new_list.len();
+        }
+
         let remove_result = new_list.drain(remove_start..remove_end);
         let popped_elements: Vec<RespFrame> = remove_result.map(|s| RespFrame::BulkString(s)).collect();
 
