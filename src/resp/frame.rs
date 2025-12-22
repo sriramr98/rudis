@@ -1,5 +1,6 @@
 use std::fmt::format;
 
+#[derive(Clone)]
 pub enum RespFrame {
     SimpleString(String),
     Error(String),

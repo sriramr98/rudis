@@ -200,6 +200,20 @@ impl Command for ListPopCommand {
     fn execute(&self, db: &std::sync::RwLock<crate::mem::MemDB<super::structs::Data>>) -> anyhow::Result<crate::resp::frame::RespFrame> {
         let key = self.args[0].clone();
 
+        // by default, we only need to remove the first element.
+        let remove_start = 0;
+        let mut remove_end = 1;
+
+        if self.args.len() == 2 {
+            // user provides the count of elements to remove
+            let count: usize = self.args[1].parse().map_err(|_| anyhow::anyhow!("ERR value is not an integer or out of range"))?;
+            if count == 0 {
+                return Ok(RespFrame::NullBulkString);
+            }
+
+            remove_end = count;
+        }
+
         let mut db_write = db.write().map_err(|e| anyhow::anyhow!(e.to_string()))?;
 
         let (mut new_list, expires_at ) = {
@@ -214,14 +228,21 @@ impl Command for ListPopCommand {
             (items.clone(), data.expires_at)
         };
 
-        let popped_element = new_list.remove(0);
+        let remove_result = new_list.drain(remove_start..remove_end);
+        let popped_elements: Vec<RespFrame> = remove_result.map(|s| RespFrame::BulkString(s)).collect();
+
         db_write.set(key, Data { value: Value::List(new_list), expires_at });
-        Ok(RespFrame::BulkString(popped_element))
+
+        if popped_elements.len() == 1 {
+            Ok(popped_elements[0].clone())
+        } else {
+            Ok(RespFrame::Array(popped_elements))
+        }
     }
 
     fn validate(&self) -> anyhow::Result<()> {
-        if self.args.len() != 1 {
-            return Err(anyhow::anyhow!("ERR wrong number of arguments for 'lpop/rpop' command"));
+        if self.args.is_empty() || self.args.len() > 2 {
+            return Err(anyhow::anyhow!("ERR wrong number of arguments for 'lpop' command"));
         }
         Ok(())
     }
