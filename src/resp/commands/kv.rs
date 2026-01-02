@@ -34,7 +34,13 @@ impl Command for GetCommand {
                 if value.expired() {
                     return Ok(RespFrame::NullBulkString);
                 }
-                Ok(RespFrame::BulkString(String::from_utf8(value.value.to_vec())?))
+
+                match &value.value {
+                    Value::String(data) => Ok(RespFrame::BulkString(String::from_utf8(data.clone())?)),
+                    Value::List(_) => {
+                        return Err(anyhow::anyhow!("GET command does not support List values"));
+                    },
+                }
             }
             None => Ok(RespFrame::Null),
         }

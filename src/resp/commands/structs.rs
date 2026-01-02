@@ -8,15 +8,6 @@ pub enum Value {
     List(Vec<String>),
 }
 
-impl Value {
-    pub fn to_vec(self: &Self) -> Vec<u8> {
-        match self {
-            Value::String(v)  => v.clone(),
-            Value::List(items) => todo!(),
-        } 
-    }
-}
-
 // Data wraps over Value with extra metadata
 pub struct Data {
     pub value: Value,
