@@ -26,7 +26,7 @@ use crate::{
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
 struct Args {
-    #[arg(short, long)]
+    #[arg(short, long, default_value_t = 6379)]
     port: u32,
 }
 
