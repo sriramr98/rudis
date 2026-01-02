@@ -31,20 +31,26 @@ async fn main() -> Result<()> {
     loop {
         let (stream, addr) = listener.accept().await?;
         println!("New Connection from {}:{}", addr.ip(), addr.port());
+
+        let connection = Connection::new(stream, addr);
+
         let db_clone = Arc::clone(&db);
         tokio::spawn(async move {
-            if let Err(e) = handle_connection(stream, db_clone).await {
+            if let Err(e) = handle_connection(connection, db_clone).await {
                 eprintln!("Error handling connection: {}", e);
             }
         });
     }
 }
 
-async fn handle_connection(stream: TcpStream, db: Arc<RwLock<MemDB<Data>>>) -> Result<()> {
-    let mut connection = Connection::new(stream);
+async fn handle_connection(mut connection: Connection, db: Arc<RwLock<MemDB<Data>>>) -> Result<()> {
     loop {
         match connection.parse().await {
             Err(err) => {
+                if err.to_string().starts_with("Connection closed") {
+                    println!("{}", err);
+                    return Ok(());
+                }
                 println!("Error parsing command: {}", err);
                 let _ = connection.write(RespFrame::Error(err.to_string())).await; //TODO: How to handle errors here??
             }

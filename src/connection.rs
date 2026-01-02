@@ -1,3 +1,5 @@
+use std::net::SocketAddr;
+
 use anyhow::{Result, anyhow};
 use bytes::BytesMut;
 use tokio::{
@@ -9,12 +11,14 @@ use crate::resp::{commands::Command, frame::RespFrame, parser::parse_resp};
 
 pub struct Connection {
     stream: BufWriter<TcpStream>,
+    addr: SocketAddr,
 }
 
 impl Connection {
-    pub fn new(stream: TcpStream) -> Connection {
+    pub fn new(stream: TcpStream, addr: SocketAddr) -> Connection {
         Connection {
             stream: BufWriter::new(stream),
+            addr,
         }
     }
 
@@ -24,7 +28,11 @@ impl Connection {
         let bytes_read = self.stream.read_buf(&mut buf).await?;
 
         if bytes_read == 0 {
-            return Err(anyhow!("No data read"));
+            return Err(anyhow!(
+                "Connection closed by {}:{}",
+                self.addr.ip(),
+                self.addr.port()
+            ));
         }
 
         let data = std::str::from_utf8(&buf)?;
