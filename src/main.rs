@@ -7,6 +7,7 @@ use std::sync::{Arc, Mutex, RwLock};
 
 use anyhow::{Ok, Result};
 use bytes::{BufMut, BytesMut};
+use clap::Parser;
 use tokio::net::{TcpListener, TcpStream};
 
 use crate::{
@@ -21,11 +22,24 @@ use crate::{
     resp::{commands::structs::Data, frame::RespFrame},
 };
 
+/// Simple program to greet a person
+#[derive(Parser, Debug)]
+#[command(version, about, long_about = None)]
+struct Args {
+    #[arg(short, long)]
+    port: u32,
+}
+
 #[tokio::main]
 async fn main() -> Result<()> {
     println!("Logs from your program will appear here!");
 
-    let listener = TcpListener::bind("127.0.0.1:6379").await?;
+    let args = Args::parse();
+    let listener_url = format!("127.0.0.1:{}", args.port);
+
+    println!("Listening on {}", listener_url);
+
+    let listener = TcpListener::bind(listener_url).await?;
     let db = Arc::new(RwLock::new(MemDB::<Data>::new()));
 
     loop {
