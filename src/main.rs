@@ -42,17 +42,17 @@ async fn main() -> Result<()> {
 
 async fn handle_connection(stream: TcpStream, db: Arc<RwLock<MemDB<Data>>>) -> Result<()> {
     let mut connection = Connection::new(stream);
-    match connection.parse().await {
-        Err(err) => {
-            println!("Error parsing command: {}", err);
-            let _ = connection.write(RespFrame::Error(err.to_string())).await; //TODO: How to handle errors here??
-            Ok(())
-        }
-        std::result::Result::Ok(command) => {
-            command.validate()?;
-            let result = command.execute(db.as_ref());
-            connection.write_result(result).await?;
-            Ok(())
+    loop {
+        match connection.parse().await {
+            Err(err) => {
+                println!("Error parsing command: {}", err);
+                let _ = connection.write(RespFrame::Error(err.to_string())).await; //TODO: How to handle errors here??
+            }
+            std::result::Result::Ok(command) => {
+                command.validate()?;
+                let result = command.execute(db.as_ref());
+                connection.write_result(result).await?;
+            }
         }
     }
 }

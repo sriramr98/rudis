@@ -10,7 +10,7 @@ pub enum RespFrame {
     EmptyArray,
     Null,
     NullBulkString,
-    NullArray
+    NullArray,
 }
 
 const CRLF: &str = "\r\n";
@@ -26,7 +26,7 @@ impl RespFrame {
                 } else {
                     format!(":-{}\r\n", num).into_bytes()
                 }
-            },
+            }
             RespFrame::BulkString(s) => format!("${}{}{}{}", s.len(), CRLF, s, CRLF).into_bytes(),
             RespFrame::Null => format!("_{}", CRLF).into_bytes(),
             RespFrame::NullBulkString => format!("$-1{}", CRLF).into_bytes(),
@@ -39,7 +39,6 @@ impl RespFrame {
                 }
                 encoded
             }
-            _ => todo!()
         }
     }
 }
