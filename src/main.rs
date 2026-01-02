@@ -1,79 +1,58 @@
 #![allow(unused_imports)]
-use std::{
-    io::{Read, Write},
-    net::{TcpListener, TcpStream},
-    sync::{Arc, Mutex, RwLock},
-    thread,
-};
-
+mod connection;
 mod mem;
 mod resp;
 
-use anyhow::Result;
-use bytes::{BufMut, BytesMut};
+use std::sync::{Arc, Mutex, RwLock};
 
-use crate::{mem::MemDB, resp::{commands::structs::Data, frame::RespFrame}};
-use crate::resp::parser::parse_resp;
-fn main() {
+use anyhow::{Ok, Result};
+use bytes::{BufMut, BytesMut};
+use tokio::net::{TcpListener, TcpStream};
+
+use crate::{
+    connection::Connection,
+    resp::{
+        commands::{Command, list, structs::Value},
+        parser::parse_resp,
+    },
+};
+use crate::{
+    mem::MemDB,
+    resp::{commands::structs::Data, frame::RespFrame},
+};
+
+#[tokio::main]
+async fn main() -> Result<()> {
     println!("Logs from your program will appear here!");
 
-    let listener = TcpListener::bind("127.0.0.1:6379").unwrap();
-    let db = Arc::new(RwLock::new(MemDB::new()));
+    let listener = TcpListener::bind("127.0.0.1:6379").await?;
+    let db = Arc::new(RwLock::new(MemDB::<Data>::new()));
 
-    for stream in listener.incoming() {
-        match stream {
-            Ok(stream) => {
-                println!("accepted new connection");
-                handle_connection(stream, Arc::clone(&db))
+    loop {
+        let (stream, addr) = listener.accept().await?;
+        println!("New Connection from {}:{}", addr.ip(), addr.port());
+        let db_clone = Arc::clone(&db);
+        tokio::spawn(async move {
+            if let Err(e) = handle_connection(stream, db_clone).await {
+                eprintln!("Error handling connection: {}", e);
             }
-            Err(e) => {
-                println!("error: {}", e);
-            }
-        }
+        });
     }
 }
 
-fn handle_connection(mut stream: TcpStream, db: Arc<RwLock<MemDB<Data>>>) {
-    thread::spawn(move || {
-        loop {
-            if let Err(e) = process_connection(&mut stream, &db) {
-                if e.to_string() == "Connection closed" {
-                    println!("connection closed");
-                    break;
-                }
-                println!("{}", e);
-                stream.write_all(&RespFrame::Error(e.to_string()).encode()).unwrap_or(());
-            }
+async fn handle_connection(stream: TcpStream, db: Arc<RwLock<MemDB<Data>>>) -> Result<()> {
+    let mut connection = Connection::new(stream);
+    match connection.parse().await {
+        Err(err) => {
+            println!("Error parsing command: {}", err);
+            let _ = connection.write(RespFrame::Error(err.to_string())).await; //TODO: How to handle errors here??
+            Ok(())
         }
-    });
-}
-
-fn process_connection(stream: &mut TcpStream, db: &Arc<RwLock<MemDB<Data>>>) -> Result<()> {
-    let mut buf = [0u8; 512];
-    let bytes_read = stream.read(&mut buf)?;
-
-    if bytes_read == 0 {
-        // EOF reached - connection closed
-        return Err(anyhow::anyhow!("Connection closed"));
-    }
-
-    let command = std::str::from_utf8(&buf)?;
-
-    match parse_resp(command) {
-        Ok(request) => {
-            request.validate()?;
-            let resp = request.execute(db.as_ref())?;
-            stream.write_all(&resp.encode())?;
-        }
-        Err(e) => {
-            // For errors, we might want to return an error to the client
-            // and decide if we should close the connection.
-            // For now, just print and continue.
-            println!("Error parsing command: {}", e);
-            // Simple error response
-            stream.write_all(b"-ERR invalid command\r\n")?;
+        std::result::Result::Ok(command) => {
+            command.validate()?;
+            let result = command.execute(db.as_ref());
+            connection.write_result(result).await?;
+            Ok(())
         }
     }
-
-    Ok(())
 }

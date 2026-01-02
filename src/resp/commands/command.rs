@@ -2,9 +2,12 @@ use std::sync::RwLock;
 
 use anyhow::Result;
 
-use crate::{mem::MemDB, resp::{commands::structs::Data, frame::RespFrame}};
+use crate::{
+    mem::MemDB,
+    resp::{commands::structs::Data, frame::RespFrame},
+};
 
-pub trait Command {
+pub trait Command: Send {
     fn execute(&self, db: &RwLock<MemDB<Data>>) -> Result<RespFrame>;
     fn validate(&self) -> Result<()>;
 }
