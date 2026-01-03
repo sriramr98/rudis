@@ -1,4 +1,4 @@
-use crate::resp::commands::Command;
+use crate::{config::Role, resp::commands::Command};
 
 pub struct InfoCommand;
 
@@ -14,11 +14,7 @@ impl Command for InfoCommand {
         _: &std::sync::RwLock<crate::mem::MemDB<super::structs::Data>>,
         config: &crate::config::Config,
     ) -> anyhow::Result<crate::resp::frame::RespFrame> {
-        let response = format!(
-            "#Clients\r\nconnected_clients:{}\r\n# Replication\r\nrole:{}\r\n",
-            config.connected_clients(),
-            config.role(),
-        );
+        let response = config.to_string();
         Ok(crate::resp::frame::RespFrame::BulkString(response))
     }
 

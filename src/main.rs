@@ -12,7 +12,7 @@ use clap::Parser;
 use tokio::net::{TcpListener, TcpStream};
 
 use crate::{
-    config::Config,
+    config::{Config, Role},
     connection::Connection,
     resp::{
         commands::{Command, list, structs::Value},
@@ -68,14 +68,24 @@ async fn main() -> Result<()> {
 }
 
 fn parse_config(args: &Args) -> Config {
-    let role: String;
-    if let Some(_) = args.replicaof {
-        role = String::from("slave")
+    let role: Role;
+    let mut master_host: Option<String> = None;
+    let mut master_port: Option<u32> = None;
+
+    if let Some(replicaof_str) = &args.replicaof {
+        role = Role::Replica;
+
+        // Parse "host port" format
+        let parts: Vec<&str> = replicaof_str.split_whitespace().collect();
+        if parts.len() == 2 {
+            master_host = Some(parts[0].to_string());
+            master_port = parts[1].parse().ok();
+        }
     } else {
-        role = String::from("master")
+        role = Role::Master
     }
 
-    return Config::new(role);
+    Config::new(role, args.port, master_host, master_port)
 }
 
 async fn handle_connection(
