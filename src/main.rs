@@ -1,4 +1,5 @@
 #![allow(unused_imports)]
+mod config;
 mod connection;
 mod mem;
 mod resp;
@@ -11,6 +12,7 @@ use clap::Parser;
 use tokio::net::{TcpListener, TcpStream};
 
 use crate::{
+    config::Config,
     connection::Connection,
     resp::{
         commands::{Command, list, structs::Value},
@@ -28,6 +30,9 @@ use crate::{
 struct Args {
     #[arg(short, long, default_value_t = 6379)]
     port: u32,
+
+    #[arg(short, long)]
+    replicaof: Option<String>,
 }
 
 #[tokio::main]
@@ -35,6 +40,8 @@ async fn main() -> Result<()> {
     println!("Logs from your program will appear here!");
 
     let args = Args::parse();
+    let config = parse_config(&args);
+
     let listener_url = format!("127.0.0.1:{}", args.port);
 
     println!("Listening on {}", listener_url);
@@ -49,15 +56,33 @@ async fn main() -> Result<()> {
         let connection = Connection::new(stream, addr);
 
         let db_clone = Arc::clone(&db);
+        let config_clone = config.clone();
+        config_clone.increment_connections();
         tokio::spawn(async move {
-            if let Err(e) = handle_connection(connection, db_clone).await {
+            if let Err(e) = handle_connection(connection, db_clone, config_clone.clone()).await {
                 eprintln!("Error handling connection: {}", e);
             }
+            config_clone.decrement_connections();
         });
     }
 }
 
-async fn handle_connection(mut connection: Connection, db: Arc<RwLock<MemDB<Data>>>) -> Result<()> {
+fn parse_config(args: &Args) -> Config {
+    let role: String;
+    if let Some(_) = args.replicaof {
+        role = String::from("slave")
+    } else {
+        role = String::from("master")
+    }
+
+    return Config::new(role);
+}
+
+async fn handle_connection(
+    mut connection: Connection,
+    db: Arc<RwLock<MemDB<Data>>>,
+    config: Config,
+) -> Result<()> {
     loop {
         match connection.parse().await {
             Err(err) => {
@@ -70,7 +95,7 @@ async fn handle_connection(mut connection: Connection, db: Arc<RwLock<MemDB<Data
             }
             std::result::Result::Ok(command) => {
                 command.validate()?;
-                let result = command.execute(db.as_ref());
+                let result = command.execute(db.as_ref(), &config);
                 connection.write_result(result).await?;
             }
         }

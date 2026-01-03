@@ -7,7 +7,13 @@ use anyhow::{Error, Ok};
 
 use crate::{
     mem::MemDB,
-    resp::{commands::{Command, structs::{Data, Value}}, frame::RespFrame},
+    resp::{
+        commands::{
+            Command,
+            structs::{Data, Value},
+        },
+        frame::RespFrame,
+    },
 };
 
 pub struct GetCommand {
@@ -21,7 +27,11 @@ impl GetCommand {
 }
 
 impl Command for GetCommand {
-    fn execute(&self, db: &RwLock<MemDB<Data>>) -> anyhow::Result<crate::resp::frame::RespFrame> {
+    fn execute(
+        &self,
+        db: &RwLock<MemDB<Data>>,
+        _config: &crate::config::Config,
+    ) -> anyhow::Result<crate::resp::frame::RespFrame> {
         let key = &self.args[0];
         let d = db
             .read()
@@ -36,10 +46,12 @@ impl Command for GetCommand {
                 }
 
                 match &value.value {
-                    Value::String(data) => Ok(RespFrame::BulkString(String::from_utf8(data.clone())?)),
+                    Value::String(data) => {
+                        Ok(RespFrame::BulkString(String::from_utf8(data.clone())?))
+                    }
                     Value::List(_) => {
                         return Err(anyhow::anyhow!("GET command does not support List values"));
-                    },
+                    }
                 }
             }
             None => Ok(RespFrame::Null),
@@ -70,7 +82,11 @@ impl SetCommand {
 }
 
 impl Command for SetCommand {
-    fn execute(&self, db: &RwLock<MemDB<Data>>) -> anyhow::Result<RespFrame> {
+    fn execute(
+        &self,
+        db: &RwLock<MemDB<Data>>,
+        _config: &crate::config::Config,
+    ) -> anyhow::Result<RespFrame> {
         let key = self.args[0].clone();
         let value = self.args[1].clone();
 
